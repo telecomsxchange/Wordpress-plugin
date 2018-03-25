@@ -5,13 +5,13 @@
  * Description: TelecomsXChange plugin connects your Wordpress site to over 300 Telecom carriers and VoIP providers around the world. allows you to create a Click2Call button or a Verify button that will connect your website visitors to your call center instantly so you never miss a lead again.
  * Version: 1.0
  * Author: TelecomsXChange
- * Author URI: www.telecomsxchange
+ * Author URI: www.telecomsxchange.com/wordpress
  * License: GPLv2 or later
  * License URI: http://www.gnu.org/licenses/gpl-2.0.html
  */
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
-add_action( 'plugins_loaded', 'load_tcxc' );
-function load_tcxc()
+add_action( 'plugins_loaded', 'tcxc_load' );
+function tcxc_load()
 {
     if ( is_admin() ) {
         add_action( 'admin_init', 'tcxc_settings' , 1000 );
@@ -24,9 +24,9 @@ function tcxc_settings()
 }
 function tcxc_menu()
 {
-    add_options_page( 'TelecomsXChange', 'TelecomsXChange', 'administrator', 'TelecomsXChange-Settings', 'settings_page' );
+    add_options_page( 'TelecomsXChange', 'TelecomsXChange', 'administrator', 'TelecomsXChange-Settings', 'tcxc_settings_page' );
 }
-function settings_page()
+function tcxc_settings_page()
 {
    $options = get_option( "tcxc");
     ?>
@@ -123,6 +123,14 @@ function settings_page()
                     </td>
                 </tr>
                 <tr valign="top">
+                    <th scope="row">phone number placeholder<br /><span style="font-size: x-small;"></span></th>
+                    <td>
+                        <input size="50" type="text" name="tcxc[input_placeholder]" placeholder="" value="<?php echo htmlspecialchars( $options['input_placeholder'] ); ?>" class="regular-text" />
+                        <br />
+                        <small>The placeholder of the input phone number i.e. "enter your phone"</small>
+                    </td>
+                </tr>
+                <tr valign="top">
                     <th scope="row">Button Text<br /><span style="font-size: x-small;"></span></th>
                     <td>
                         <input size="50" type="text" name="tcxc[btn_text]" placeholder="Request a Call" value="<?php echo htmlspecialchars( $options['btn_text'] ); ?>" class="regular-text" />
@@ -157,7 +165,7 @@ function settings_page()
     </div>
     <?php
 }
-function makeTheCall($c)
+function tcxc_makeTheCall($c)
 {
     $options= get_option('tcxc');
     $cld1=$options['cld1'];
@@ -173,33 +181,21 @@ function makeTheCall($c)
     $tcxc_host = "https://members.telecomsxchange.com";
     $check_uri = "/api/callback/initiate/$login/$i_account/$cld1/$cli1/$i_connection1/$cld2/$cli2/$i_connection2/$ts/";
     $sign = hash('sha256',$check_uri . $api_key);
-    $handle=curl_init( $tcxc_host . $check_uri . $sign );
-    curl_setopt($handle, CURLOPT_VERBOSE, true);
-    curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-    $content = curl_exec($handle);
-    return $content;
+    $body = wp_remote_retrieve_body( wp_remote_get( $tcxc_host . $check_uri . $sign ,['redirection'=>0]) );
+    return $body;
 }
 add_action( 'admin_post_test_tcxc', 'tcxc_test' );
 
 function tcxc_test() {
     $url = add_query_arg( 'msg', "", urldecode( $_POST['_wp_http_referer'] ) );
     $number=$_POST['tcxc_number'];
-    add_filter( 'redirect_post_location',  'add_notice_query_var', 99 );
-    makeTheCall($number);
+    add_filter( 'redirect_post_location',  'tcxc_add_notice_query_var', 99 );
+    $o=tcxc_makeTheCall($number);
     wp_safe_redirect( $url );
     exit;
 }
-add_action( 'admin_notices', 'render_msg' );
-
-function render_msg()
-{
-    echo '<div class="' . esc_attr( $_GET['msg'] ) . '"><p>'
-        . esc_attr( $_GET['msg'] ) . '</p></div>';
-}
-add_action( 'admin_notices', 'admin_notices' );
- function admin_notices() {
+add_action( 'admin_notices', 'tcxc_admin_notices' );
+ function tcxc_admin_notices() {
     if ( ! isset( $_GET['msg'] ) ) {
         return;
     }
@@ -209,12 +205,12 @@ add_action( 'admin_notices', 'admin_notices' );
     </div>
     <?php
 }
-function add_notice_query_var( $location ) {
-    remove_filter( 'redirect_post_location', 'add_notice_query_var', 99 );
+function tcxc_add_notice_query_var( $location ) {
+    remove_filter( 'redirect_post_location', 'tcxc_add_notice_query_var', 99 );
     return add_query_arg( array( 'msg' => 'ID' ), $location );
 }
-add_shortcode('tcxc-button', 'display_button');
-function display_button()
+add_shortcode('tcxc-button', 'tcxc_display_button');
+function tcxc_display_button()
 {
     $option = get_option("tcxc");
     wp_enqueue_script(
@@ -237,7 +233,7 @@ function display_button()
     );
     ob_start();
     echo '<div class="callme-wrapper">';
-    echo '<div class="callme-slider" style="max-width:300px;display: none;"><input type="text" class="number-input" placeholder="please Enter your number"  name="r_number" /><span class="call-msg"></span></div>';
+    echo '<div class="callme-slider" style="max-width:300px;display: none;"><input type="text" class="number-input" placeholder="'.$option['input_placeholder'].'"  name="r_number" /><span class="call-msg"></span></div>';
     echo '<input type="button" class="call_btn" value="';
     echo empty($option['btn_text'])?"Call Me":$option['btn_text'];
     echo '" />';
@@ -264,25 +260,25 @@ function display_button()
     ob_end_clean();
     return $html;
 }
-add_action( 'wp_ajax_nopriv_ajax_request_call', 'process_call_request' );
-add_action( 'wp_ajax_ajax_request_call', 'process_call_request' );  // For logged in users.
-function process_call_request() {
+add_action( 'wp_ajax_nopriv_ajax_request_call', 'tcxc_process_call_request' );
+add_action( 'wp_ajax_ajax_request_call', 'tcxc_process_call_request' );  // For logged in users.
+function tcxc_process_call_request() {
     check_ajax_referer( 'wptcxc-nonce', 'nonce' );  // This function will die if nonce is not correct.
     $number = sanitize_text_field($_POST['number']);
-    if(isLocked())
+    if(tcxc_isLocked())
     {
         wp_send_json_error();
     }
     else{
-        incrementUses();
-        $o=makeTheCall($number);
+        tcxc_incrementUses();
+        $o=tcxc_makeTheCall($number);
         wp_send_json($o);
     }
     wp_die();
 }
 
-add_action(str_replace( ABSPATH . 'wp-content/plugins' . "/", "activate_", __FILE__), 'db_install');
-function db_install()
+add_action(str_replace( ABSPATH . 'wp-content/plugins' . "/", "activate_", __FILE__), 'tcxc_db_install');
+function tcxc_db_install()
 {
     global $wpdb;
     if( $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}tcxc_uses'") != "tcxc_uses" ) {
@@ -300,17 +296,18 @@ function db_install()
     $option['lock_time']='60';
     $option['error_msg']='You have exceeded max number of callback requests today, Call [number] for further assistance.';
     $option['btn_text']='Call me now';
+    $option['input_placeholder']='44791234567';
     update_option('tcxc',$option);
 }
-function incrementUses() {
+function tcxc_incrementUses() {
     global $wpdb;
     $ip = $_SERVER['REMOTE_ADDR'];
     $q = "INSERT INTO {$wpdb->prefix}tcxc_uses (request_date, user_IP) " .
         "VALUES ( now(), '%s')";
     $q = $wpdb->prepare( $q, $ip );
-    $results = $wpdb->query($q);
+    $wpdb->query($q);
 }
-function isLocked() {
+function tcxc_isLocked() {
     global $wpdb;
     $ip = $_SERVER['REMOTE_ADDR'];
     $option = get_option('tcxc');

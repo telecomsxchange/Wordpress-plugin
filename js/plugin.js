@@ -40,7 +40,7 @@
                         },3000);
                     },
                     error : function( response ) {
-                        console.log(response);
+                        jQuery(btn).parents(".callme-wrapper").find(".call-msg").css("color","#FF6666").html(wptcxc_object.error_msg);
                     }
                 });
             }
