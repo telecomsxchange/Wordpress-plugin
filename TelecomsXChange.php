@@ -3,7 +3,7 @@
  * Plugin Name: TelecomsXChange
  * Plugin URI: https://github.com/telecomsxchange/Wordpress-plugin
  * Description: TelecomsXChange plugin connects your Wordpress site to over 300 Telecom carriers and VoIP providers around the world. allows you to create a Click2Call button or a Verify button that will connect your website visitors to your call center instantly so you never miss a lead again.
- * Version: 1.0
+ * Version: 1.3
  * Author: TelecomsXChange
  * Author URI: www.telecomsxchange.com/wordpress
  * License: GPLv2 or later
@@ -20,7 +20,7 @@ function tcxc_load()
 }
 function tcxc_settings()
 {
-    register_setting( "TelecomsXChange-Settings", "tcxc",[] );
+    register_setting( "TelecomsXChange-Settings", "tcxc");
 }
 function tcxc_menu()
 {
