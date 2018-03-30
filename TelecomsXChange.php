@@ -181,7 +181,7 @@ function tcxc_makeTheCall($c)
     $tcxc_host = "https://members.telecomsxchange.com";
     $check_uri = "/api/callback/initiate/$login/$i_account/$cld1/$cli1/$i_connection1/$cld2/$cli2/$i_connection2/$ts/";
     $sign = hash('sha256',$check_uri . $api_key);
-    $body = wp_remote_retrieve_body( wp_remote_get( $tcxc_host . $check_uri . $sign ,['redirection'=>0]) );
+    $body = wp_remote_retrieve_body( wp_remote_get( $tcxc_host . $check_uri . $sign , array('redirection'=>0)));
     return $body;
 }
 add_action( 'admin_post_test_tcxc', 'tcxc_test' );
@@ -216,20 +216,20 @@ function tcxc_display_button()
     wp_enqueue_script(
         'wptcxc',
         plugin_dir_url( __FILE__ ) . 'js/plugin.js',
-        [ 'jquery' ],
+        array('jquery'),
         false,
         true
     );
     wp_localize_script(
         'wptcxc',
         'wptcxc_object',
-        [
+        array(
             'ajax_url'  => admin_url( 'admin-ajax.php' ),
             'nonce'  => wp_create_nonce( 'wptcxc-nonce' ),
             'call_confirm'=>empty($option['call_confirm'])?"We will call you shortly!":$option['call_confirm'],
             'poweredby'=>empty($option['poweredby'])?"Powered by: TelecomsXChange":$option['poweredby'],
             'error_msg'=>empty($option['error_msg'])?"You have exceeded max number of callback requests today, Call {$option['cli2']} for further assistance.":str_replace("[number]",$option['cli2'],$option['error_msg']),
-        ]
+        )
     );
     ob_start();
     echo '<div class="callme-wrapper">';
