@@ -14,3 +14,5 @@ FEATURES:
 - Send calls to any existing or future carrier by simply changing carrier id  
 - Same Wholesale Rates as usual 
 - 100% FREE plugin  
+
+This plugin was built on top of the TelecomsXChange TCXC-PHP API (https://github.com/telecomsxchange/tcxc-php)
